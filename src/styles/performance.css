@@ -1,0 +1,95 @@
+/* Performance-optimized CSS to prevent forced reflows */
+
+/* Use CSS containment to isolate layout calculations */
+.category-item {
+  contain: layout style paint;
+  will-change: transform;
+  transform: translateZ(0); /* Force hardware acceleration */
+}
+
+/* Optimize transforms for better performance */
+.category-item:hover {
+  transform: scale3d(1.05, 1.05, 1) translateZ(0);
+}
+
+.category-item:active {
+  transform: scale3d(0.95, 0.95, 1) translateZ(0);
+}
+
+/* Prevent layout shift during loading */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem 3px;
+}
+
+@media (min-width: 1024px) {
+  .category-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .category-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+@media (max-width: 360px) {
+  .category-grid {
+    gap: 1rem;
+  }
+}
+
+/* Optimize image containers */
+.image-container {
+  position: relative;
+  aspect-ratio: 1;
+  contain: layout;
+}
+
+/* Prevent reflow during animations */
+.loading-skeleton {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  contain: strict;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+/* Optimize scroll performance */
+.scroll-container {
+  contain: layout style paint;
+  overflow-anchor: auto;
+}
+
+/* Reduce paint operations */
+.text-content {
+  contain: layout style;
+  text-rendering: optimizeSpeed;
+}
+
+/* Hardware acceleration for better performance */
+.hw-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Optimize list rendering */
+.optimized-list {
+  contain: layout;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.optimized-list li {
+  contain: layout style paint;
+}
