@@ -20,10 +20,8 @@ import { apiGet } from "@/lib/api"
 import { toast } from "sonner"
 
 const sideBarMenuOnlyRole0 = [
-  "OTP",
-  "Manage Users",
-  "Manage Admin Users",
-  "Live User",
+  "OTP",  
+  "Manage Admin Users",  
   "Email Premium Listing",
   "Manage User Ip Activity",
   "All Quotation",

@@ -32,20 +32,23 @@ export async function generateMetadata({ params }) {
   };
 }
 
-// Remove generateStaticParams for dynamic rendering
-// This enables real-time data fetching on each request
+export async function generateStaticParams() {
+  const res = await getRequest(`/get-all-listing-slug`);
+  const data = res.data;
+  const { listing, jobs, products } = data;
 
-// Force dynamic rendering - no cache, real-time data
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+  return [...listing, ...jobs, ...products].map((item) => ({
+    slug: item.slug,
+  }));
+}
 
 export default async function page({ params }) {
   const { slug } = await params;
-  
-  // Fetch fresh data on every request - reflects admin changes immediately
   const respnce = await getRequest(
     `/get-listing-details-data?url_slug=${slug}`
   );
   
+  
+
   return <MainRoute slug={slug} slugData={respnce?.data} />;
 }
