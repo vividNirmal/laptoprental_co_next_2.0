@@ -28,7 +28,7 @@ export default function Header() {
   const adminuser = useSelector((state) => state.users.adminuser)
   const dispatch = useDispatch()
   useEffect(() => {
-    fetchEmailPermission()
+    // fetchEmailPermission()
     getuserBytoken()
     const user = localStorage.getItem("loginuser")
     if (user) {

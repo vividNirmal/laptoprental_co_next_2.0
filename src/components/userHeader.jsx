@@ -509,8 +509,7 @@ export default function UserHeader() {
   // Add this function for development/testing purposes - can be called from browser console
   if (typeof window !== 'undefined') {
     window.clearAllLocationData = () => {
-      clearUserLocationSelection();
-      console.log('🧹 Cleared all location data');
+      clearUserLocationSelection();      
     };
     window.getLocationStatus = () => {
       const stored = getSelectedLocation();

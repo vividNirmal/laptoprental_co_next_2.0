@@ -366,7 +366,18 @@ const handleSend = (input) => {
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
             <DialogDescription className="hidden" />
           </DialogHeader>
-
+          {chatBotBanner && showBanner && (
+              <div className="w-full px-4 h-24 overflow-hidden relative mb-2">
+                <Image src={chatBotBanner} alt="chat_bot_banner" className="object-cover w-full h-full rounded-lg" width={400} height={100} />
+                <button
+                  onClick={() => setShowBanner(false)}
+                  className="absolute top-2 right-6 bg-black/50 text-white rounded-full p-1 flex items-center justify-center hover:bg-black/70"
+                >
+                  <X className="size-4" />
+                </button>
+                
+              </div>
+            )}
           {/* Messages Container */}
           <div className="h-56 grow p-2">
             <ul className="overflow-auto h-full p-2 flex flex-col gap-2.5 custom-scroll" onScroll={handleScroll}>
@@ -434,18 +445,7 @@ const handleSend = (input) => {
             </ul>
           </div>
 
-          {chatBotBanner && showBanner && (
-              <div className="w-full px-4 h-24 overflow-hidden relative mb-2">
-                <Image src={chatBotBanner} alt="chat_bot_banner" className="object-cover w-full h-full rounded-lg" width={400} height={100} />
-                <button
-                  onClick={() => setShowBanner(false)}
-                  className="absolute top-2 right-6 bg-black/50 text-white rounded-full p-1 flex items-center justify-center hover:bg-black/70"
-                >
-                  <X className="size-4" />
-                </button>
-                
-              </div>
-            )}
+          
 
           {/* Input Area with Formik */}
           <form onSubmit={formik.handleSubmit} className="flex items-center bg-white w-full relative p-2">

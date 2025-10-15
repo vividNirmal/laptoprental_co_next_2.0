@@ -12,8 +12,7 @@ export default function PerformanceMonitor() {
     const observer = new PerformanceObserver((list) => {
       list.getEntries().forEach((entry) => {
         switch (entry.entryType) {
-          case 'largest-contentful-paint':
-            console.log('LCP:', entry.startTime);
+          case 'largest-contentful-paint':            
             // Track LCP
             if (typeof gtag !== 'undefined') {
               gtag('event', 'web_vitals', {
@@ -24,8 +23,7 @@ export default function PerformanceMonitor() {
             }
             break;
 
-          case 'first-input':
-            console.log('FID:', entry.processingStart - entry.startTime);
+          case 'first-input':            
             // Track FID
             if (typeof gtag !== 'undefined') {
               gtag('event', 'web_vitals', {
@@ -37,8 +35,7 @@ export default function PerformanceMonitor() {
             break;
 
           case 'layout-shift':
-            if (!entry.hadRecentInput) {
-              console.log('CLS:', entry.value);
+            if (!entry.hadRecentInput) {              
               // Track CLS
               if (typeof gtag !== 'undefined') {
                 gtag('event', 'web_vitals', {
@@ -110,9 +107,7 @@ export default function PerformanceMonitor() {
 export function measurePerformance(name, fn) {
   const start = performance.now();
   const result = fn();
-  const end = performance.now();
-  
-  console.log(`${name} took ${end - start}ms`);
+  const end = performance.now();    
   
   // Track custom metrics
   if (typeof gtag !== 'undefined') {

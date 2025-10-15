@@ -130,8 +130,7 @@ export default function RootLayout({ children }) {
             // Prevent WebSocket blocking bfcache
             window.addEventListener('pageshow', function(event) {
               if (event.persisted) {
-                // Page restored from bfcache
-                console.log('Page restored from bfcache');
+                // Page restored from bfcache                
               }
             });
             
