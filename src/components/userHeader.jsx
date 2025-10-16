@@ -67,13 +67,50 @@ import {
   isValidLocation
 } from "@/lib/locationStorage";
 
+export function DynamicFavicon() {
+  const staticdata = useSelector((state) => state.setting.staticData);
+  
+  useEffect(() => {
+    if (staticdata?.fav_icon) {
+      const favIcon = staticdata.fav_icon;
+      
+      // Remove existing favicon links
+      const existingLinks = document.querySelectorAll("link[rel*='icon']");
+      existingLinks.forEach(link => link.remove());
+      
+      // Add new favicon
+      const link = document.createElement('link');
+      link.rel = 'icon';
+      link.type = 'image/x-icon';
+      link.href = favIcon;
+      document.head.appendChild(link);
+      
+      // Add apple-touch-icon
+      const appleTouchIcon = document.createElement('link');
+      appleTouchIcon.rel = 'apple-touch-icon';
+      appleTouchIcon.href = favIcon;
+      document.head.appendChild(appleTouchIcon);
+      
+      // Add shortcut icon for older browsers
+      const shortcutIcon = document.createElement('link');
+      shortcutIcon.rel = 'shortcut icon';
+      shortcutIcon.href = favIcon;
+      document.head.appendChild(shortcutIcon);
+      
+      console.log('✅ Favicon updated to:', favIcon);
+    }
+  }, [staticdata?.fav_icon]); // Update whenever favicon changes in Redux
+
+  return null;
+}
+
 export default function UserHeader() {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [locationSearch, setLocationSearch] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [userSelectedLocation, setUserSelectedLocation] = useState(false); // Flag to track manual selection
+  const [userSelectedLocation, setUserSelectedLocation] = useState(false);
   const [banner, setBanner] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLogin, setIsLogin] = useState(false);
@@ -82,7 +119,7 @@ export default function UserHeader() {
   // Function to clear user selection (updated to use localStorage)
   const clearUserLocationSelection = () => {
     setUserSelectedLocation(false);
-    clearSelectedLocation(); // Clear from localStorage
+    clearSelectedLocation();
     sessionStorage.removeItem("user_selected_location");
     sessionStorage.removeItem("location_data");
     setSelectedLocation(null);
@@ -341,6 +378,8 @@ export default function UserHeader() {
     );
     if (responce) {
       dispatch(handleSetSticData(responce.data?.site_data));
+      // Favicon will be automatically updated by DynamicFavicon component
+      // which watches the Redux state
     }
   }
 
@@ -349,6 +388,8 @@ export default function UserHeader() {
     const response = await userGetRequest(`frontend-settings`);
     if (response) {
       dispatch(handleSetSticData(response.data?.site_data));
+      // Favicon will be automatically updated by DynamicFavicon component
+      
       const locationData = response.data?.current_location || {};
       if (locationData?.location_type == "area") {
         setDataobject = {
@@ -435,7 +476,7 @@ export default function UserHeader() {
           cleanLocationName = locationName
             .toLowerCase()
             .replace(/[^\w\s-]/g, "") 
-            .replace(/\(([^)]+)\)/g, "$1") 
+            .replace(/KATEX_INLINE_OPEN([^)]+)KATEX_INLINE_CLOSE/g, "$1") 
             .replace(/[\s(),.-]+/g, "-") 
             .replace(/-+/g, "-") 
             .replace(/(^-|-$)/g, ""); 
@@ -519,7 +560,7 @@ export default function UserHeader() {
   }
 
   return (
-    <>
+    <>     
       <header className="w-full bg-white border-b border-gray-200 py-2.5 md:py-4">
         <div className="container px-2.5 mx-auto">
           <div className="flex flex-wrap items-center gap-2 lg:gap-4">

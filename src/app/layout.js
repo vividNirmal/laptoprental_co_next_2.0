@@ -8,6 +8,7 @@ import { Suspense, lazy } from "react";
 import dynamic from "next/dynamic";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
 import HomePagePreloader from "@/components/HomePagePreloader";
+import { DynamicFavicon } from "@/components/userHeader";
 
 // Lazy load non-critical components with loading states
 const BackToTopButton = dynamic(() => import("@/components/BackToTopButton"), { 
@@ -87,6 +88,7 @@ export default function RootLayout({ children }) {
           <RouteLoader />
         </Suspense>
         <StoreProvider>
+               <DynamicFavicon />
           <HomePagePreloader />
           {children}
           <Suspense fallback={null}>
