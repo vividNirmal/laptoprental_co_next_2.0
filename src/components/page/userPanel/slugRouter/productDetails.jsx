@@ -40,35 +40,7 @@ export default function ProductDetails({ data }) {
     <div className="flex flex-wrap items-start gap-4">
       <div className="w-2/4 flex flex-wrap gap-4 grow">
         <div className="w-full lg:w-5/12 grow">
-          <div className="bg-white rounded-2xl p-4 shadow-lg">
-            {/* <div className="relative after:block after:pt-[56.25%]">
-              <Image
-                alt="product img"
-                className="absolute inset-0 w-full h-full object-contain"
-                src={
-                  product?.product_images[0] ||
-                  "/placeholder.svg?height=300&width=500&query=product image"
-                }
-                width={500}
-                height={300}
-              />
-            </div>
-            <div className="flex items-center justify-between mt-2">
-              <Button
-                className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 cursor-pointer"
-                disabled
-              >
-                <ArrowLeft className="size-4 2xl:size-5" />
-              </Button>
-              <div className="flex items-center max-w-full overflow-auto gap-2 w-full">                
-              </div>
-              <Button
-                className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 cursor-pointer"
-                disabled
-              >
-                <ArrowRight className="shrink-0 size-4 2xl:size-4" />
-              </Button>
-            </div> */}
+          <div className="bg-white rounded-2xl p-4 shadow-lg">            
             <Carousel className="w-full">
               <CarouselContent>
                 {product?.product_images.map((item, index) => (
@@ -81,7 +53,7 @@ export default function ProductDetails({ data }) {
                           alt={`Product image ${index + 1}`}
                           className="w-full h-full object-cover absolute top-0 left-0 max-w-full" // Adjusted styling for better fit
                           src={
-                            `${baseUrl}/${item}` ||
+                            `${item}` ||
                             "/placeholder.svg?height=300&width=300"
                           }
                           width={500}

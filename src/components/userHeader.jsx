@@ -97,7 +97,7 @@ export function DynamicFavicon() {
       shortcutIcon.href = favIcon;
       document.head.appendChild(shortcutIcon);
       
-      console.log('✅ Favicon updated to:', favIcon);
+      
     }
   }, [staticdata?.fav_icon]); // Update whenever favicon changes in Redux
 
