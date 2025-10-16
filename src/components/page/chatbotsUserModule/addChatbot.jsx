@@ -8,13 +8,67 @@ import { toast } from "sonner"
 import { getRequest, postRequest } from "@/service/viewService"
 import { CustomCombobox } from "@/components/common/customcombox"
 
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { GripVertical } from "lucide-react"
+
 import { useFormik } from "formik"
 import * as Yup from "yup"
 
-// Validation schema for the form
 const validationSchema = Yup.object({
   city_id: Yup.string().nullable().required("City is required"),
 })
+
+// Sortable Item Component
+function SortableItem({ id, item }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-white p-2 mb-2 border border-gray-200 rounded shadow-sm text-xs 2xl:text-base text-gray-800 flex items-center gap-2"
+      data-sortable-id={id}
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing p-1"
+      >
+        <GripVertical size={16} className="text-gray-400" />
+      </button>      
+      <span>{item.name}</span>
+    </div>
+  )
+}
 
 export default function AddChatbot({ id }) {
   const router = useRouter()
@@ -23,17 +77,20 @@ export default function AddChatbot({ id }) {
   const [searchSelected, setSearchSelected] = useState("")
   const [availableListings, setAvailableListings] = useState([])
   const [selectedListings, setSelectedListings] = useState([])
-  const [draggedItem, setDraggedItem] = useState(null)
-  const [dragSource, setDragSource] = useState(null)
-  const [dragOverTarget, setDragOverTarget] = useState(null)
 
-  // State for City selection (now managed by Formik)
-  const [cityList, setCityList] = useState([])
-   // Use the prop for ID to simulate edit mode
+  const [cityList, setCityList] = useState([])    
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      distance: 8,
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   const formik = useFormik({
     initialValues: {
-      city_id: null ,
+      city_id: null,
     },
     validationSchema: validationSchema,
     onSubmit: async (values) => {
@@ -46,9 +103,8 @@ export default function AddChatbot({ id }) {
         return
       }
 
-      
       try {
-        const formData = new FormData() // Use FormData as in Angular code
+        const formData = new FormData()
 
         const isAllCitySelected = values.city_id === "Select All"
         if (isAllCitySelected) {
@@ -58,30 +114,26 @@ export default function AddChatbot({ id }) {
           formData.append("city_id", values.city_id)
         }
 
-        selectedListings.forEach((element) => {
-          // Use listing_unique_id if available, otherwise fallback to id
-          formData.append("listing_id[]", element.listing_unique_id || element._id)
-        })
-
         if (id) {
           formData.append("chat_boat_id", id)
         }
 
-        // The Angular code uses the same endpoint for add and edit
+        const listingsWithOrder = selectedListings.map((element, index) => ({
+          id: element.listing_unique_id || element._id,
+          order: index,
+        }))
+        formData.append("listing_id", JSON.stringify(listingsWithOrder))
+
         const response = await postRequest("add-chatboat-listing", formData)
         toast.success(response.message || "Chatbots added successfully")
-        router.push("/dashboard/chatbot-listing") // Simulate navigation
+        router.push("/dashboard/chatbot-listing")
       } catch (err) {
         toast.error(err?.message || "Failed to add chatbots")
-      } finally {
-
       }
     },
   })
 
-  // Fetch initial city list on component mount
   useEffect(() => {
-    
     getRequest("get-form-city-list")
       .then((res) => {
         const cities = [{ unique_id: "Select All", name: "Select All" }, ...res.data]
@@ -90,163 +142,219 @@ export default function AddChatbot({ id }) {
       .catch((err) => {
         toast.error(err?.message || "Failed to load cities")
       })
-      .finally(() => {
-
-      })
   }, [])
 
-  // Handle initial data load for edit mode
   useEffect(() => {
     if (id && cityList.length > 0) {
-      
       getRequest(`get-chat-boat-listing-details/${id}`)
         .then((res) => {
           const data = res.data.chatboat_listing
+          
+          // Sort listings by order field
+          const sortedListings = Array.isArray(data.listing_id) 
+            ? [...data.listing_id].sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
+            : []
+
           const selectedCityFromApi = cityList.find(
-            (city) => city.unique_id === data.city_id?.unique_id || (data.is_city_select_all && city.unique_id === "Select All"),
+            (city) =>
+              city.unique_id === data.city_id?.unique_id ||
+              (data.is_city_select_all && city.unique_id === "Select All")
           )
 
           if (selectedCityFromApi) {
             formik.setFieldValue("city_id", selectedCityFromApi?.unique_id)
-            // Fetch listings for the pre-selected city, passing initial selected listings
-            fetchListingsForCity(selectedCityFromApi.unique_id, data.listing_id || [])
+            fetchListingsForCity(selectedCityFromApi.unique_id, sortedListings)
           } else {
-            // If city not found or "Select All" not in list yet, just set selected listings
-            setSelectedListings(data.listing_id || [])
-    
+            // If city not found in list, just set the selected listings
+            setSelectedListings(sortedListings)
+            setPageloader(false)
           }
         })
         .catch((err) => {
           toast.error(err?.message || "Failed to load chatbot details")
-  
+          setPageloader(false)
         })
     } else if (!id) {
-      // For new entry, ensure loader is off and lists are empty
       setPageloader(false)
       setAvailableListings([])
       setSelectedListings([])
     }
-  }, [id, cityList]) // Depend on cityList to ensure it's loaded before setting city_id
+  }, [id, cityList])
 
-  // Function to fetch listings based on selected city
   const fetchListingsForCity = useCallback(
     (cityId, initialSelected = []) => {
-      
       getRequest(`get-listing-city-wise?city_id=${cityId}`)
         .then((res) => {
           const fetchedListings = res.data
-          const initialSelectedIds = new Set(initialSelected.map((item) => item._id))
+          
+          // Create a set of IDs from initial selected (check both _id and listing_unique_id)
+          const initialSelectedIds = new Set(
+            initialSelected.map((item) => item._id || item.listing_unique_id)
+          )
 
-          // Separate initial selected from available
-          const newAvailable = fetchedListings.filter((item) => !initialSelectedIds.has(item._id))
-          const newSelected = fetchedListings.filter((item) => initialSelectedIds.has(item._id))
+          const newAvailable = fetchedListings.filter(
+            (item) => !initialSelectedIds.has(item._id) && !initialSelectedIds.has(item.listing_unique_id)
+          )
+          
+          // If we have initial selected items with full data, use them
+          // Otherwise, filter from fetched listings
+          let newSelected = []
+          if (initialSelected.length > 0 && initialSelected[0].name) {
+            // Initial selected already has full data (from edit mode)
+            newSelected = initialSelected
+          } else {
+            // Need to get full data from fetched listings
+            newSelected = fetchedListings.filter((item) =>
+              initialSelectedIds.has(item._id) || initialSelectedIds.has(item.listing_unique_id)
+            )
+          }
 
           setAvailableListings(newAvailable)
-          setSelectedListings(newSelected.length > 0 ? newSelected : initialSelected) // Prioritize fetched selected, fallback to initial
+          setSelectedListings(newSelected)
         })
         .catch((err) => {
           toast.error(err?.message || "Failed to load listings")
         })
         .finally(() => {
-  
+          setPageloader(false)
         })
     },
-    [selectedListings],
-  ) // Depend on selectedListings to correctly filter
+    []
+  )
 
-  // Handle city selection change (now updates Formik state)
   const handleCityChange = useCallback(
     (city) => {
-      formik.setFieldValue("city_id", city) // Update Formik state
-      setSelectedListings([]) // Clear selected listings when city changes
+      formik.setFieldValue("city_id", city)
+      setSelectedListings([])
       if (city) {
         fetchListingsForCity(city)
       } else {
-        setAvailableListings([]) // Clear available if no city selected
+        setAvailableListings([])
       }
     },
-    [formik, fetchListingsForCity],
+    [formik, fetchListingsForCity]
   )
 
-  const handleDragStart = (item, source) => {
-    setDraggedItem(item)
-    setDragSource(source)
-  }
+  const handleDragEnd = (event) => {
+    const { active, over } = event
 
-  const handleDragOver = (e, target) => {
-    e.preventDefault()
-    setDragOverTarget(target)
-  }
-
-  const handleDrop = (e, target) => {
-    e.preventDefault()
-    if (!draggedItem || dragSource === target) return
-
-    // Prevent adding duplicate items to the target list
-    const isInTarget =
-      target === "selected"
-        ? selectedListings.some((item) => item._id === draggedItem._id)
-        : availableListings.some((item) => item._id === draggedItem._id)
-
-    if (isInTarget) {
-      setDraggedItem(null)
-      setDragSource(null)
-      setDragOverTarget(null)
+    if (!over || active.id === over.id) {
       return
     }
 
-    if (dragSource === "available" && target === "selected") {
-      setSelectedListings((prev) => [...prev, draggedItem])
-      setAvailableListings((prev) => prev.filter((i) => i._id !== draggedItem._id))
-    } else if (dragSource === "selected" && target === "available") {
-      setAvailableListings((prev) => [...prev, draggedItem])
-      setSelectedListings((prev) => prev.filter((i) => i._id !== draggedItem._id))
-    }
+    // Only handle reordering within selected listings
+    if (active.id.startsWith("selected-") && over.id.startsWith("selected-")) {
+      setSelectedListings((items) => {
+        const oldIndex = items.findIndex(
+          (item) => `selected-${item._id}` === active.id
+        )
+        const newIndex = items.findIndex(
+          (item) => `selected-${item._id}` === over.id
+        )
 
-    setDraggedItem(null)
-    setDragSource(null)
-    setDragOverTarget(null)
+        return arrayMove(items, oldIndex, newIndex)
+      })
+    }
   }
 
-  const handleDragEnd = () => {
-    setDraggedItem(null)
-    setDragSource(null)
-    setDragOverTarget(null)
+  const handleDragOverAvailable = (e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+  }
+
+  const handleDropAvailable = (e) => {
+    e.preventDefault()
+    const id = e.dataTransfer.getData("text/plain")
+
+    if (id.startsWith("selected-")) {
+      const itemId = id.replace("selected-", "")
+      const activeItem = selectedListings.find((item) => item._id === itemId)
+
+      if (activeItem) {
+        setAvailableListings((items) => [...items, activeItem])
+        setSelectedListings((items) =>
+          items.filter((item) => item._id !== activeItem._id)
+        )
+      }
+    }
+  }
+
+  const handleDragOverSelected = (e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+  }
+
+  const handleDropSelected = (e) => {
+    e.preventDefault()
+    const id = e.dataTransfer.getData("text/plain")
+
+    if (id.startsWith("available-")) {
+      const itemId = id.replace("available-", "")
+      const activeItem = availableListings.find((item) => item._id === itemId)
+
+      if (activeItem && !selectedListings.find((item) => item._id === activeItem._id)) {
+        setSelectedListings((items) => [...items, activeItem])
+        setAvailableListings((items) =>
+          items.filter((item) => item._id !== activeItem._id)
+        )
+      }
+    }
   }
 
   const filteredAvailable = availableListings.filter((item) =>
-    item.name.toLowerCase().includes(searchAvailable.toLowerCase()),
+    item.name?.toLowerCase().includes(searchAvailable.toLowerCase())
   )
 
   const filteredSelected = selectedListings.filter((item) =>
-    item.name.toLowerCase().includes(searchSelected.toLowerCase()),
+    item.name?.toLowerCase().includes(searchSelected.toLowerCase())
   )
+
+  if (pageloader) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    )
+  }
 
   return (
     <div>
-        <form onSubmit={formik.handleSubmit}>
-          <div className="w-full mb-5">
-            <label htmlFor="city_select" className="text-xs 2xl:text-base font-normal text-slate-500 w-full block mb-1">
-              City
-            </label>
-            <CustomCombobox
-              name="city_id"
-              value={formik.values.city_id}
-              onChange={handleCityChange}
-              onBlur={() => formik.setFieldTouched("city_id", true)}
-              options={cityList}
-              valueKey="unique_id"
-              labelKey="name"
-              placeholder="Select City"
-              id="city_select"
-            />
-            {formik.touched.city_id && formik.errors.city_id && (
-              <div className="text-xs text-red-500 mt-1">{formik.errors.city_id}</div>
-            )}
-          </div>
+      <form onSubmit={formik.handleSubmit}>
+        <div className="w-full mb-5">
+          <label
+            htmlFor="city_select"
+            className="text-xs 2xl:text-base font-normal text-slate-500 w-full block mb-1"
+          >
+            City
+          </label>
+          <CustomCombobox
+            name="city_id"
+            value={formik.values.city_id}
+            onChange={handleCityChange}
+            onBlur={() => formik.setFieldTouched("city_id", true)}
+            options={cityList}
+            valueKey="unique_id"
+            labelKey="name"
+            placeholder="Select City"
+            id="city_select"
+          />
+          {formik.touched.city_id && formik.errors.city_id && (
+            <div className="text-xs text-red-500 mt-1">
+              {formik.errors.city_id}
+            </div>
+          )}
+        </div>
+
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h2 className="text-base 2xl:text-xl font-normal mb-4 text-gray-800">Available Listings</h2>
+              <h2 className="text-base 2xl:text-xl font-normal mb-4 text-gray-800">
+                Available Listings
+              </h2>
               <Input
                 placeholder="Search available listings..."
                 value={searchAvailable}
@@ -254,23 +362,25 @@ export default function AddChatbot({ id }) {
                 className="mb-2 w-full p-2 border rounded"
               />
               <div
-                onDrop={(e) => handleDrop(e, "available")}
-                onDragOver={(e) => handleDragOver(e, "available")}
-                onDragLeave={() => setDragOverTarget(null)}
-                className={`border border-solid border-gray-300 bg-white p-2 h-96 overflow-y-auto rounded-md ${
-                  dragOverTarget === "available" ? "" : ""
-                }`}
+                className="border border-solid border-gray-300 bg-white p-2 h-96 overflow-y-auto rounded-md"
+                onDragOver={handleDragOverAvailable}
+                onDrop={handleDropAvailable}
               >
                 {filteredAvailable.length === 0 ? (
-                  <div className="text-gray-500 text-xs p-2">No available listings found.</div>
+                  <div className="text-gray-500 text-xs p-2">
+                    No available listings found.
+                  </div>
                 ) : (
                   filteredAvailable.map((item) => (
                     <div
                       key={item._id}
-                      draggable
-                      onDragStart={() => handleDragStart(item, "available")}
-                      onDragEnd={handleDragEnd}
-                      className="bg-white p-2 mb-1 border border-gray-200 rounded shadow-sm cursor-grab text-xs 2xl:text-base text-gray-800"
+                      data-sortable-id={`available-${item._id}`}
+                      className="bg-white p-2 mb-2 border border-gray-200 rounded shadow-sm cursor-grab active:cursor-grabbing text-xs 2xl:text-base text-gray-800"
+                      draggable={true}
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = "move"
+                        e.dataTransfer.setData("text/plain", `available-${item._id}`)
+                      }}
                     >
                       {item.name}
                     </div>
@@ -278,8 +388,14 @@ export default function AddChatbot({ id }) {
                 )}
               </div>
             </div>
+
             <div>
-              <h2 className="text-base 2xl:text-xl font-normal mb-4 text-gray-800">Selected Listings</h2>
+              <h2 className="text-base 2xl:text-xl font-normal mb-4 text-gray-800">
+                Selected Listings{" "}
+                <span className="text-xs text-gray-500">
+                  (Drag to reorder)
+                </span>
+              </h2>
               <Input
                 placeholder="Search selected listings..."
                 value={searchSelected}
@@ -287,41 +403,47 @@ export default function AddChatbot({ id }) {
                 className="mb-2 w-full p-2 border rounded"
               />
               <div
-                onDrop={(e) => handleDrop(e, "selected")}
-                onDragOver={(e) => handleDragOver(e, "selected")}
-                onDragLeave={() => setDragOverTarget(null)}
-                className={`border border-solid border-gray-300 bg-white p-2 h-96 overflow-y-auto rounded-md ${
-                  dragOverTarget === "selected" ? "" : ""
-                }`}
+                className="border border-solid border-gray-300 bg-white p-2 h-96 overflow-y-auto rounded-md"
+                onDragOver={handleDragOverSelected}
+                onDrop={handleDropSelected}
               >
                 {filteredSelected.length === 0 ? (
-                  <div className="text-gray-500 text-xs p-2">No selected listings. Drag items here.</div>
+                  <div className="text-gray-500 text-xs p-2">
+                    No selected listings. Drag items here.
+                  </div>
                 ) : (
-                  filteredSelected.map((item) => (
-                    <div
-                      key={item._id}
-                      draggable
-                      onDragStart={() => handleDragStart(item, "selected")}
-                      onDragEnd={handleDragEnd}
-                      className="bg-white p-2 mb-1 border border-gray-200 rounded shadow-sm cursor-grab text-xs 2xl:text-base text-gray-800"
-                    >
-                      {item.name}
-                    </div>
-                  ))
+                  <SortableContext
+                    items={filteredSelected.map((item) => `selected-${item._id}`)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {filteredSelected.map((item) => (
+                      <SortableItem
+                        key={item._id}
+                        id={`selected-${item._id}`}
+                        item={item}
+                      />
+                    ))}
+                  </SortableContext>
                 )}
               </div>
             </div>
           </div>
-          <div className="pt-4">
-            <Button
-              type="submit"
-              disabled={!formik.values.city_id || selectedListings.length === 0 || formik.isSubmitting}
-              className="cursor-pointer p-1.5 px-3 bg-[#7367f0] text-white rounded-lg w-fit flex items-center gap-2.5 text-xs 2xl:text-base font-base border border-solid border-[#7367f0] hover:bg-white hover:text-[#7367f0] whitespace-nowrap transition-all duration-200 ease-linear mt-3"
-            >
-              {formik.isSubmitting ? "Submitting..." : "Submit"}
-            </Button>
-          </div>
-        </form>
+        </DndContext>
+
+        <div className="pt-4">
+          <Button
+            type="submit"
+            disabled={
+              !formik.values.city_id ||
+              selectedListings.length === 0 ||
+              formik.isSubmitting
+            }
+            className="cursor-pointer p-1.5 px-3 bg-[#7367f0] text-white rounded-lg w-fit flex items-center gap-2.5 text-xs 2xl:text-base font-base border border-solid border-[#7367f0] hover:bg-white hover:text-[#7367f0] whitespace-nowrap transition-all duration-200 ease-linear mt-3"
+          >
+            {formik.isSubmitting ? "Submitting..." : "Submit"}
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }

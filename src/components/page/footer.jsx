@@ -23,7 +23,7 @@ export default function Footer({ userToken }) {
   const mumbaiRef = useRef(null);
   const naviRef = useRef(null);
   const puneRef = useRef(null);
-
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.laptoprental.co/api/v1";
   const isMumbaiVisible = useInView(mumbaiRef);
   const isNaviVisible = useInView(naviRef);
   const isPuneVisible = useInView(puneRef);
@@ -113,7 +113,7 @@ export default function Footer({ userToken }) {
           ) : (
             <ul className="w-full mx-auto grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-px bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 p-8 shadow-2xl">
               <li className="col-span-full border-b border-solid border-white mb-4 " >
-                <h2 className="text-xl xl:text-2xl font-semibold text-white text-center mb-4 cursor-pointer" onClick={()=>handeleListingredirate('mumbai')}>
+                <h2 className="text-xl xl:text-2xl font-semibold text-white text-center mb-4 cursor-pointer" onClick={()=>handeleListingredirate('mumbai')} title={`${baseUrl}/${listingData.categoryDetails?.slug}-mumbai/${listingData.categoryDetails?.unique_id}`}>
                   {currentCategory} Mumbai
                 </h2>
               </li>
@@ -147,7 +147,7 @@ export default function Footer({ userToken }) {
           ) : (
             <ul className="w-full mx-auto grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-px bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 p-8 shadow-2xl">
               <li className="col-span-full border-b border-solid border-white mb-4 "  >
-                <h2 className="text-xl xl:text-2xl font-semibold text-white mb-4 text-center cursor-pointer " onClick={()=>handeleListingredirate('navi-mumbai')}>
+                <h2 className="text-xl xl:text-2xl font-semibold text-white mb-4 text-center cursor-pointer " onClick={()=>handeleListingredirate('navi-mumbai')} title={`${baseUrl}/${listingData.categoryDetails?.slug}-navi-mumbai/${listingData.categoryDetails?.unique_id}`}>
                   {currentCategory} Navi Mumbai
                 </h2>
               </li>
@@ -184,7 +184,7 @@ export default function Footer({ userToken }) {
           ) : (
             <ul className="w-full mx-auto grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-px bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 p-8 shadow-2xl">
               <li className="col-span-full border-b border-solid border-white mb-4 " >
-                <h2 className="text-xl xl:text-2xl font-semibold text-white mb-4 text-center cursor-pointer"  onClick={()=>handeleListingredirate('pune')}>
+                <h2 className="text-xl xl:text-2xl font-semibold text-white mb-4 text-center cursor-pointer"  onClick={()=>handeleListingredirate('pune')} title={`${baseUrl}/${listingData.categoryDetails?.slug}-pune/${listingData.categoryDetails?.unique_id}`}>
                   {currentCategory} Pune
                 </h2>
               </li>
